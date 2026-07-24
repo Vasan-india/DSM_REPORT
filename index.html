@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DSM Service Request Dashboard</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --border: #dfe4ee;
+      --text: #1e293b;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --accent-2: #8b5cf6;
+      --orange: #f59e0b;
+      --blue: #2563eb;
+      --green: #16a34a;
+      --gray: #64748b;
+      --red: #dc2626;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app-shell {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-box {
+      width: 72px;
+      height: 72px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #eff6ff, #f8fafc);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 8px;
+    }
+
+    .logo-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .brand p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button, .file-pill {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    button:hover, .file-pill:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+    button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+    button.danger { background: var(--red); color: white; border-color: var(--red); }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .control-group { display: flex; align-items: center; gap: 8px; }
+    .control-group label { font-weight: 600; color: var(--muted); }
+    .control-group select, .control-group input[type="search"] {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      min-width: 180px;
+      background: #fff;
+    }
+
+    .stats {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+    }
+
+    .table-shell {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: calc(100vh - 280px);
+      min-height: 300px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 1200px;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 10px;
+      text-align: left;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    thead th .drag-hint { margin-left: 6px; color: var(--muted); font-size: 0.8rem; }
+
+    tbody td {
+      padding: 10px;
+      border-bottom: 1px solid #eef2f7;
+      vertical-align: top;
+      font-size: 0.9rem;
+      background: #fff;
+      white-space: nowrap;
+    }
+
+    tbody tr:nth-child(even) td { background: #fbfdff; }
+    tbody tr:hover td { background: #f4f8ff; }
+
+    .sticky-col {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      background: #fff;
+      box-shadow: 1px 0 0 var(--border);
+    }
+
+    tbody tr:nth-child(even) .sticky-col { background: #fbfdff; }
+    tbody tr:hover .sticky-col { background: #f4f8ff; }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 8px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .status-new-request { background: rgba(245, 158, 11, 0.15); color: var(--orange); }
+    .status-solution-development { background: rgba(37, 99, 235, 0.15); color: var(--blue); }
+    .status-user-acceptance { background: rgba(22, 163, 74, 0.15); color: var(--green); }
+    .status-post-implementation-review { background: rgba(100, 116, 139, 0.15); color: var(--gray); }
+    .status-request-closure { background: rgba(220, 38, 38, 0.15); color: var(--red); }
+
+    .timeline {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .timeline-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      padding: 4px 6px;
+      border-radius: 999px;
+      color: white;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .timeline-badge.orange { background: var(--orange); }
+    .timeline-badge.blue { background: var(--blue); }
+    .timeline-badge.green { background: var(--green); }
+    .timeline-badge.gray { background: var(--gray); }
+    .timeline-badge.red { background: var(--red); }
+    .timeline-badge.purple { background: var(--accent-2); }
+
+    .empty-state {
+      text-align: center;
+      padding: 44px 20px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .panel {
+      position: fixed;
+      right: 20px;
+      top: 84px;
+      width: min(360px, calc(100vw - 30px));
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      z-index: 30;
+      display: none;
+      padding: 14px;
+    }
+
+    .panel.open { display: block; }
+
+    .panel h3 { margin: 0 0 10px; font-size: 1rem; }
+    .panel .panel-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+    .panel .panel-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fcfdff;
+      cursor: move;
+    }
+
+    .panel .panel-item label { cursor: pointer; font-weight: 600; }
+    .panel .panel-item .drag-handle { color: var(--muted); font-size: 0.9rem; }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+    @media (max-width: 900px) {
+      .topbar { align-items: flex-start; }
+      .stats { margin-left: 0; }
+      .control-group select, .control-group input[type="search"] { min-width: 140px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo-box" id="logoBox">
+          <span>Logo</span>
+        </div>
+        <div>
+          <h1>DSM Service Request Dashboard</h1>
+          <p>Upload CSV/XLSX/XLS files and manage service requests in one view.</p>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button id="changeLogoBtn" type="button">Change Logo</button>
+        <button id="columnsBtn" type="button">Columns</button>
+        <button id="exportBtn" class="primary" type="button">Export Excel</button>
+        <label class="file-pill" for="fileInput">Upload Files</label>
+        <input class="sr-only" id="fileInput" type="file" accept=".csv,.xlsx,.xls" multiple />
+        <input class="sr-only" id="logoInput" type="file" accept="image/*" />
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="moduleFilter">Module</label>
+        <select id="moduleFilter">
+          <option value="all">All Modules</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="statusFilter">Status</label>
+        <select id="statusFilter">
+          <option value="all">All Statuses</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="searchInput">Search</label>
+        <input id="searchInput" type="search" placeholder="Global search" />
+      </div>
+      <div class="stats" id="statsText">0 rows</div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+
+    <div class="table-shell">
+      <div class="table-wrap">
+        <table id="dataTable">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="columnPanel" class="panel" aria-label="Column settings">
+    <h3>Column Management</h3>
+    <p style="margin: 0 0 10px; color: var(--muted); font-size: 0.9rem;">Hide, show, and reorder columns.</p>
+    <div id="columnPanelList" class="panel-list"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.1/dist/xlsx.full.min.js"></script>
+  <script>
+    const STORAGE_KEYS = {
+      columns: 'dsm_dashboard_columns',
+      logo: 'dsm_dashboard_logo'
+    };
+
+    const baseColumns = [
+      { id: 'reqno', label: 'Req No', visible: true, type: 'text' },
+      { id: 'description', label: 'Description', visible: true, type: 'text' },
+      { id: 'module', label: 'Module', visible: true, type: 'text' },
+      { id: 'status', label: 'Status', visible: true, type: 'text' },
+      { id: 'created', label: 'Created', visible: true, type: 'date' },
+      { id: 'updated', label: 'Updated', visible: true, type: 'date' },
+      { id: 'creationAging', label: 'Creation Aging', visible: true, type: 'number' },
+      { id: 'updateAging', label: 'Update Aging', visible: true, type: 'number' },
+      { id: 'details', label: 'Details', visible: true, type: 'text' },
+      { id: 'newReq', label: 'New Req', visible: true, type: 'text' },
+      { id: 'solDev', label: 'Sol Dev', visible: true, type: 'text' },
+      { id: 'owner', label: 'Owner', visible: true, type: 'text' },
+      { id: 'timeline', label: 'Timeline', visible: true, type: 'text' }
+    ];
+
+    const timelineDefinitions = {
+      newrequest: { label: 'New Request', short: 'NR', color: 'orange' },
+      systemownerapproval: { label: 'System Owner Approval', short: 'SOA', color: 'purple' },
+      requestreview: { label: 'Request Review', short: 'RR', color: 'purple' },
+      solutiondevelopment: { label: 'Solution Development', short: 'SD', color: 'blue' },
+      useracceptance: { label: 'User Acceptance', short: 'UAT', color: 'green' },
+      solutionendorsement: { label: 'Solution Endorsement', short: 'SE', color: 'green' },
+      solutiontransportation: { label: 'Solution Transportation', short: 'ST', color: 'blue' },
+      transportationapproval: { label: 'Transportation Approval', short: 'TA', color: 'purple' },
+      postimplementationreview: { label: 'Post Implementation Review', short: 'PIR', color: 'gray' },
+      requestclosure: { label: 'Request Closure', short: 'RC', color: 'red' }
+    };
+
+    const state = {
+      rows: [],
+      filteredRows: [],
+      columns: baseColumns.map(c => ({ ...c })),
+      filters: { module: 'all', status: 'all', search: '' },
+      sort: { key: 'updated', direction: 'desc' },
+      logo: ''
+    };
+
+    const els = {
+      fileInput: document.getElementById('fileInput'),
+      logoInput: document.getElementById('logoInput'),
+      moduleFilter: document.getElementById('moduleFilter'),
+      statusFilter: document.getElementById('statusFilter'),
+      searchInput: document.getElementById('searchInput'),
+      statsText: document.getElementById('statsText'),
+      legend: document.getElementById('legend'),
+      tableHead: document.getElementById('tableHead'),
+      tableBody: document.getElementById('tableBody'),
+      columnPanel: document.getElementById('columnPanel'),
+      columnPanelList: document.getElementById('columnPanelList'),
+      logoBox: document.getElementById('logoBox')
+    };
+
+    function init() {
+      restoreSettings();
+      bindEvents();
+      render();
+    }
+
+    function bindEvents() {
+      document.getElementById('changeLogoBtn').addEventListener('click', () => els.logoInput.click());
+      els.logoInput.addEventListener('change', handleLogoFile);
+      els.fileInput.addEventListener('change', handleUpload);
+      els.moduleFilter.addEventListener('change', (e) => {
+        state.filters.module = e.target.value;
+        applyFilters();
+      });
+      els.statusFilter.addEventListener('change', (e) => {
+        state.filters.status = e.target.value;
+        applyFilters();
+      });
+      els.searchInput.addEventListener('input', (e) => {
+        state.filters.search = e.target.value.trim().toLowerCase();
+        applyFilters();
+      });
+      document.getElementById('columnsBtn').addEventListener('click', () => {
+        els.columnPanel.classList.toggle('open');
+        renderColumnPanel();
+      });
+      document.getElementById('exportBtn').addEventListener('click', exportExcel);
+      document.addEventListener('click', (e) => {
+        if (!els.columnPanel.contains(e.target) && !document.getElementById('columnsBtn').contains(e.target)) {
+          els.columnPanel.classList.remove('open');
+        }
+      });
+    }
+
+    function restoreSettings() {
+      try {
+        const savedColumns = JSON.parse(localStorage.getItem(STORAGE_KEYS.columns) || 'null');
+        if (Array.isArray(savedColumns) && savedColumns.length) {
+          const savedMap = new Map(savedColumns.map(col => [col.id, col]));
+          const merged = baseColumns.map(col => ({ ...col, ...(savedMap.get(col.id) || {}) }));
+          state.columns = merged;
+        }
+      } catch (error) {
+        console.warn('Unable to restore column settings', error);
+      }
+
+      try {
+        const savedLogo = localStorage.getItem(STORAGE_KEYS.logo);
+        if (savedLogo) {
+          state.logo = savedLogo;
+        }
+      } catch (error) {
+        console.warn('Unable to restore logo', error);
+      }
+
+      renderLogo();
+    }
+
+    function saveSettings() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.columns, JSON.stringify(state.columns));
+      } catch (error) {
+        console.warn('Unable to save column settings', error);
+      }
+      try {
+        if (state.logo) {
+          localStorage.setItem(STORAGE_KEYS.logo, state.logo);
+        }
+      } catch (error) {
+        console.warn('Unable to save logo', error);
+      }
+    }
+
+    function handleLogoFile(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        state.logo = reader.result;
+        renderLogo();
+        saveSettings();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderLogo() {
+      if (state.logo) {
+        els.logoBox.innerHTML = `<img src="${state.logo}" alt="Dashboard logo" />`;
+      } else {
+        els.logoBox.innerHTML = '<span>Logo</span>';
+      }
+    }
+
+    async function handleUpload(event) {
+      const files = Array.from(event.target.files || []);
+      if (!files.length) return;
+      const allRows = [];
+      const progress = files.map(async (file) => {
+        const rows = await parseFile(file);
+        allRows.push(...rows);
+      });
+      await Promise.all(progress);
+      state.rows = allRows.map((row, index) => buildRow(row, index));
+      state.filters.module = 'all';
+      state.filters.status = 'all';
+      state.filters.search = '';
+      els.moduleFilter.value = 'all';
+      els.statusFilter.value = 'all';
+      els.searchInput.value = '';
+      applyFilters();
+    }
+
+    function parseFile(file) {
+      return new Promise((resolve, reject) => {
+        const name = (file.name || '').toLowerCase();
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const result = e.target.result;
+            let workbook;
+            if (name.endsWith('.csv')) {
+              workbook = XLSX.read(result, { type: 'string', cellDates: true });
+            } else {
+              workbook = XLSX.read(result, { type: 'array', cellDates: true });
+            }
+            const rows = [];
+            workbook.SheetNames.forEach((sheetName) => {
+              const sheet = workbook.Sheets[sheetName];
+              const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+              json.forEach((row) => rows.push(row));
+            });
+            resolve(rows);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        reader.onerror = () => reject(new Error('Unable to read file'));
+        if (name.endsWith('.csv')) {
+          reader.readAsText(file);
+        } else {
+          reader.readAsArrayBuffer(file);
+        }
+      });
+    }
+
+    function normalizeHeader(value) {
+      return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+    }
+
+    function buildRow(rawRow, index) {
+      const normalized = {};
+      Object.keys(rawRow || {}).forEach((key) => {
+        normalized[normalizeHeader(key)] = rawRow[key];
+      });
+
+      const reqNo = getNormalizedValue(normalized, ['requestnumber', 'reqno', 'requestno', 'request']) || '';
+      const description = getNormalizedValue(normalized, ['requirements', 'requesttitle', 'description', 'requirement']) || '';
+      const module = getNormalizedValue(normalized, ['modulename', 'module', 'module name']) || '';
+      const status = getNormalizedValue(normalized, ['status']) || '';
+      const createdValue = getNormalizedValue(normalized, ['createddatetime', 'createddate', 'created', 'creationdate', 'createdat']);
+      const updatedValue = getNormalizedValue(normalized, ['lastupdateddatetime', 'updateddatetime', 'updateddate', 'updated', 'lastupdated', 'lastupdateddatetime']);
+      const details = description;
+
+      const created = parseDateValue(createdValue);
+      const updated = parseDateValue(updatedValue);
+      const now = new Date();
+      const creationAging = created ? Math.max(0, Math.floor((now - created) / 86400000)) : '';
+      const updateAging = updated ? Math.max(0, Math.floor((now - updated) / 86400000)) : '';
+
+      const routingLog = parseRoutingLog(getNormalizedValue(normalized, ['actionroutinglog', 'routinglog', 'actionroutelog', 'routing'])) || [];
+      const newReq = findActionName(routingLog, 'newrequest') || '';
+      const solDev = findLastActionName(routingLog, 'solutiondevelopment') || '';
+      const owner = routingLog.length ? (routingLog[routingLog.length - 1].Name || '') : '';
+      const timeline = buildTimeline(routingLog);
+
+      return {
+        id: index,
+        reqno: String(reqNo || ''),
+        description: String(description || ''),
+        module: String(module || ''),
+        status: String(status || ''),
+        created: created || null,
+        updated: updated || null,
+        creationAging,
+        updateAging,
+        details: String(details || ''),
+        newReq: String(newReq || ''),
+        solDev: String(solDev || ''),
+        owner: String(owner || ''),
+        timeline,
+        _searchText: [reqNo, description, module, status, details, newReq, solDev, owner, timeline.map(b => b.short).join(' ')].join(' ').toLowerCase()
+      };
+    }
+
+    function getNormalizedValue(normalized, aliases) {
+      for (const alias of aliases) {
+        if (normalized[alias] !== undefined && normalized[alias] !== null && normalized[alias] !== '') {
+          return normalized[alias];
+        }
+      }
+      return '';
+    }
+
+    function parseRoutingLog(value) {
+      if (!value) return [];
+      if (Array.isArray(value)) return value.filter(Boolean);
+      if (typeof value === 'object') return Object.values(value);
+      let text = String(value).trim();
+      if (!text) return [];
+      try {
+        return JSON.parse(text);
+      } catch (error) {
+        try {
+          const normalized = text.replace(/([{,]\s*)([A-Za-z0-9_]+)(\s*:)/g, '$1"$2"$3').replace(/'/g, '"');
+          return JSON.parse(normalized);
+        } catch (secondError) {
+          return [];
+        }
+      }
+    }
+
+    function findActionName(items, target) {
+      const targetKey = normalizeHeader(target);
+      const match = items.find((entry) => normalizeHeader(entry.ActionName || entry.actionName || entry.action || entry.name || '') === targetKey);
+      return match ? (match.Name || match.name || '') : '';
+    }
+
+    function findLastActionName(items, target) {
+      const targetKey = normalizeHeader(target);
+      const matches = items.filter((entry) => normalizeHeader(entry.ActionName || entry.actionName || entry.action || entry.name || '') === targetKey);
+      return matches.length ? (matches[matches.length - 1].Name || matches[matches.length - 1].name || '') : '';
+    }
+
+    function buildTimeline(items) {
+      const badges = [];
+      items.forEach((entry) => {
+        const key = normalizeHeader(entry.ActionName || entry.actionName || entry.action || entry.name || '');
+        const definition = timelineDefinitions[key];
+        if (definition) {
+          badges.push(definition);
+        }
+      });
+      return badges;
+    }
+
+    function parseDateValue(value) {
+      if (!value && value !== 0) return null;
+      if (value instanceof Date) return value;
+      if (typeof value === 'number' && value > 10000) {
+        try {
+          return new Date((value - 25569) * 86400000);
+        } catch (error) {
+          return null;
+        }
+      }
+      if (typeof value === 'string') {
+        const text = value.trim();
+        if (!text) return null;
+        const iso = new Date(text);
+        if (!Number.isNaN(iso.getTime())) return iso;
+        const slashFormats = [
+          /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2}:\d{2}(?::\d{2})?)?$/,
+          /^(\d{4})\/(\d{1,2})\/(\d{1,2})\s*(\d{1,2}:\d{2}(?::\d{2})?)?$/,
+          /^(\d{1,2})\-(\d{1,2})\-(\d{4})\s*(\d{1,2}:\d{2}(?::\d{2})?)?$/
+        ];
+        for (const pattern of slashFormats) {
+          const match = text.match(pattern);
+          if (match) {
+            let year = parseInt(match[3] || match[1], 10);
+            let month = parseInt(match[2], 10) - 1;
+            let day = parseInt(match[1] || match[3], 10);
+            if (pattern.source.includes('^\\d{4}')) {
+              year = parseInt(match[1], 10);
+              month = parseInt(match[2], 10) - 1;
+              day = parseInt(match[3], 10);
+            }
+            const hours = match[4] ? parseInt(match[4].split(':')[0], 10) : 0;
+            const minutes = match[4] ? parseInt(match[4].split(':')[1], 10) : 0;
+            const seconds = match[4] && match[4].split(':')[2] ? parseInt(match[4].split(':')[2], 10) : 0;
+            const candidate = new Date(year, month, day, hours, minutes, seconds);
+            if (!Number.isNaN(candidate.getTime())) return candidate;
+          }
+        }
+      }
+      return null;
+    }
+
+    function applyFilters() {
+      const filtered = state.rows.filter((row) => {
+        const moduleMatch = state.filters.module === 'all' || row.module === state.filters.module;
+        const statusMatch = state.filters.status === 'all' || row.status === state.filters.status;
+        const searchMatch = !state.filters.search || row._searchText.includes(state.filters.search);
+        return moduleMatch && statusMatch && searchMatch;
+      });
+
+      const sorted = sortRows(filtered);
+      state.filteredRows = sorted;
+      renderFilters();
+      renderTable();
+      renderLegend();
+      renderSummary();
+    }
+
+    function sortRows(rows) {
+      const { key, direction } = state.sort;
+      const sorted = [...rows];
+      sorted.sort((a, b) => {
+        const aValue = getSortValue(a, key);
+        const bValue = getSortValue(b, key);
+        const multiplier = direction === 'asc' ? 1 : -1;
+        if (aValue === bValue) return 0;
+        if (aValue === '' || aValue === null || aValue === undefined) return 1 * multiplier;
+        if (bValue === '' || bValue === null || bValue === undefined) return -1 * multiplier;
+        if (key === 'created' || key === 'updated') {
+          return ((aValue.getTime() - bValue.getTime()) * multiplier);
+        }
+        if (key === 'creationAging' || key === 'updateAging' || key === 'reqno') {
+          return ((Number(aValue) || 0) - (Number(bValue) || 0)) * multiplier;
+        }
+        return String(aValue).localeCompare(String(bValue), undefined, { sensitivity: 'base' }) * multiplier;
+      });
+      return sorted;
+    }
+
+    function getSortValue(row, key) {
+      switch (key) {
+        case 'reqno': return row.reqno;
+        case 'description': return row.description;
+        case 'module': return row.module;
+        case 'status': return row.status;
+        case 'created': return row.created;
+        case 'updated': return row.updated;
+        case 'creationAging': return row.creationAging;
+        case 'updateAging': return row.updateAging;
+        case 'details': return row.details;
+        case 'newReq': return row.newReq;
+        case 'solDev': return row.solDev;
+        case 'owner': return row.owner;
+        case 'timeline': return row.timeline.map((item) => item.short).join(',');
+        default: return '';
+      }
+    }
+
+    function renderFilters() {
+      const modules = [...new Set(state.rows.map((row) => row.module).filter(Boolean))].sort();
+      const statuses = [...new Set(state.rows.map((row) => row.status).filter(Boolean))].sort();
+      const moduleOptions = '<option value="all">All Modules</option>' + modules.map((module) => `<option value="${escapeHtml(module)}">${escapeHtml(module)}</option>`).join('');
+      const statusOptions = '<option value="all">All Statuses</option>' + statuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join('');
+      els.moduleFilter.innerHTML = moduleOptions;
+      els.statusFilter.innerHTML = statusOptions;
+      els.moduleFilter.value = state.filters.module;
+      els.statusFilter.value = state.filters.status;
+    }
+
+    function renderSummary() {
+      els.statsText.textContent = `${state.filteredRows.length} of ${state.rows.length} rows`;
+    }
+
+    function renderLegend() {
+      const legendItems = Object.entries(timelineDefinitions).map(([key, entry]) => `
+        <span class="legend-item">
+          <span class="timeline-badge ${entry.color}">${entry.short}</span>
+          <span>${entry.label}</span>
+        </span>
+      `).join('');
+      els.legend.innerHTML = legendItems;
+    }
+
+    function renderTable() {
+      const visibleColumns = state.columns.filter((col) => col.visible);
+      const headHtml = '<tr>' + visibleColumns.map((col) => `
+        <th data-column-id="${col.id}" draggable="true" scope="col" class="${col.id === 'reqno' ? 'sticky-col' : ''}">
+          <span>${escapeHtml(col.label)}</span>
+          <span class="drag-hint">↕</span>
+        </th>
+      `).join('') + '</tr>';
+      els.tableHead.innerHTML = headHtml;
+
+      els.tableHead.querySelectorAll('th').forEach((th) => {
+        th.addEventListener('dragstart', handleHeaderDragStart);
+        th.addEventListener('dragover', handleHeaderDragOver);
+        th.addEventListener('drop', handleHeaderDrop);
+        th.addEventListener('click', () => toggleSort(th.dataset.columnId));
+      });
+
+      if (!state.filteredRows.length) {
+        els.tableBody.innerHTML = '<tr><td colspan="' + visibleColumns.length + '" class="empty-state">No matching records. Upload files or adjust your filters.</td></tr>';
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      state.filteredRows.forEach((row) => {
+        const tr = document.createElement('tr');
+        visibleColumns.forEach((col) => {
+          const td = document.createElement('td');
+          if (col.id === 'reqno') {
+            td.className = 'sticky-col';
+          }
+          td.innerHTML = formatCellValue(row, col.id);
+          tr.appendChild(td);
+        });
+        fragment.appendChild(tr);
+      });
+      els.tableBody.innerHTML = '';
+      els.tableBody.appendChild(fragment);
+    }
+
+    function formatCellValue(row, columnId) {
+      switch (columnId) {
+        case 'reqno': return escapeHtml(row.reqno || '');
+        case 'description': return escapeHtml(row.description || '');
+        case 'module': return escapeHtml(row.module || '');
+        case 'status': return `<span class="status-pill status-${normalizeHeader(row.status)}">${escapeHtml(row.status || '')}</span>`;
+        case 'created': return escapeHtml(formatDate(row.created));
+        case 'updated': return escapeHtml(formatDate(row.updated));
+        case 'creationAging': return escapeHtml(row.creationAging === '' ? '' : `${row.creationAging}d`);
+        case 'updateAging': return escapeHtml(row.updateAging === '' ? '' : `${row.updateAging}d`);
+        case 'details': return escapeHtml(row.details || '');
+        case 'newReq': return escapeHtml(row.newReq || '');
+        case 'solDev': return escapeHtml(row.solDev || '');
+        case 'owner': return escapeHtml(row.owner || '');
+        case 'timeline':
+          return `<div class="timeline">${row.timeline.map((badge) => `<span class="timeline-badge ${badge.color}">${escapeHtml(badge.short)}</span>`).join('')}</div>`;
+        default: return '';
+      }
+    }
+
+    function toggleSort(columnId) {
+      if (!columnId) return;
+      if (state.sort.key === columnId) {
+        state.sort.direction = state.sort.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sort.key = columnId;
+        state.sort.direction = 'asc';
+      }
+      applyFilters();
+    }
+
+    function handleHeaderDragStart(event) {
+      event.dataTransfer.setData('text/plain', event.currentTarget.dataset.columnId);
+    }
+
+    function handleHeaderDragOver(event) {
+      event.preventDefault();
+    }
+
+    function handleHeaderDrop(event) {
+      event.preventDefault();
+      const draggedId = event.dataTransfer.getData('text/plain');
+      const targetId = event.currentTarget.dataset.columnId;
+      if (!draggedId || !targetId || draggedId === targetId) return;
+      reorderColumns(draggedId, targetId);
+      renderTable();
+      saveSettings();
+    }
+
+    function reorderColumns(fromId, toId) {
+      const fromIndex = state.columns.findIndex((col) => col.id === fromId);
+      const toIndex = state.columns.findIndex((col) => col.id === toId);
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+      const [moved] = state.columns.splice(fromIndex, 1);
+      state.columns.splice(toIndex, 0, moved);
+    }
+
+    function renderColumnPanel() {
+      const items = state.columns.map((col) => `
+        <div class="panel-item" draggable="true" data-column-id="${col.id}">
+          <label>
+            <input type="checkbox" data-column-toggle="${col.id}" ${col.visible ? 'checked' : ''} /> ${escapeHtml(col.label)}
+          </label>
+          <span class="drag-handle">⋮⋮</span>
+        </div>
+      `).join('');
+      els.columnPanelList.innerHTML = items;
+      els.columnPanelList.querySelectorAll('[data-column-toggle]').forEach((checkbox) => {
+        checkbox.addEventListener('change', (e) => {
+          const col = state.columns.find((item) => item.id === e.target.dataset.columnToggle);
+          if (col) {
+            col.visible = e.target.checked;
+            renderTable();
+            saveSettings();
+          }
+        });
+      });
+      els.columnPanelList.querySelectorAll('.panel-item').forEach((item) => {
+        item.addEventListener('dragstart', (event) => event.dataTransfer.setData('text/plain', event.currentTarget.dataset.columnId));
+        item.addEventListener('dragover', (event) => event.preventDefault());
+        item.addEventListener('drop', (event) => {
+          event.preventDefault();
+          const draggedId = event.dataTransfer.getData('text/plain');
+          const targetId = event.currentTarget.dataset.columnId;
+          if (!draggedId || !targetId || draggedId === targetId) return;
+          reorderColumns(draggedId, targetId);
+          renderColumnPanel();
+          renderTable();
+          saveSettings();
+        });
+      });
+    }
+
+    function formatDate(value) {
+      if (!value) return '';
+      try {
+        return value.toLocaleString();
+      } catch (error) {
+        return '';
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function exportExcel() {
+      if (!state.filteredRows.length) return;
+      const visibleColumns = state.columns.filter((col) => col.visible);
+      const exportRows = state.filteredRows.map((row) => {
+        const rowData = {};
+        visibleColumns.forEach((col) => {
+          rowData[col.label] = getExportValue(row, col.id);
+        });
+        return rowData;
+      });
+      const worksheet = XLSX.utils.json_to_sheet(exportRows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Requests');
+      const fileName = `dsm_requests_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+    }
+
+    function getExportValue(row, columnId) {
+      switch (columnId) {
+        case 'reqno': return row.reqno;
+        case 'description': return row.description;
+        case 'module': return row.module;
+        case 'status': return row.status;
+        case 'created': return formatDate(row.created);
+        case 'updated': return formatDate(row.updated);
+        case 'creationAging': return row.creationAging === '' ? '' : `${row.creationAging}d`;
+        case 'updateAging': return row.updateAging === '' ? '' : `${row.updateAging}d`;
+        case 'details': return row.details;
+        case 'newReq': return row.newReq;
+        case 'solDev': return row.solDev;
+        case 'owner': return row.owner;
+        case 'timeline': return row.timeline.map((item) => item.short).join(', ');
+        default: return '';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
