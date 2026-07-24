@@ -95,6 +95,14 @@
       align-items: center;
       flex-wrap: wrap;
     }
+    .fetch-group { display:flex; gap:8px; align-items:center; }
+    .fetch-group input[type="text"], .fetch-group input[type="password"] {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      min-width: 180px;
+      background: #fff;
+    }
 
     button, .file-pill {
       border: 1px solid var(--border);
@@ -239,6 +247,8 @@
       white-space: nowrap;
     }
 
+    .status-ageing { box-shadow: inset 0 0 0 2px rgba(245,159,11,0.08); }
+
     .status-new-request { background: rgba(245, 158, 11, 0.15); color: var(--orange); }
     .status-solution-development { background: rgba(37, 99, 235, 0.15); color: var(--blue); }
     .status-user-acceptance { background: rgba(22, 163, 74, 0.15); color: var(--green); }
@@ -271,6 +281,8 @@
     .timeline-badge.gray { background: var(--gray); }
     .timeline-badge.red { background: var(--red); }
     .timeline-badge.purple { background: var(--accent-2); }
+
+    .desc-cell { max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display:inline-block; vertical-align:middle; }
 
     .empty-state {
       text-align: center;
@@ -312,6 +324,8 @@
     .panel .panel-item label { cursor: pointer; font-weight: 600; }
     .panel .panel-item .drag-handle { color: var(--muted); font-size: 0.9rem; }
 
+    .panel .panel-item .pin-btn { margin-left: 8px; background: transparent; border: 1px solid var(--border); padding: 4px 6px; border-radius: 8px; cursor: pointer; }
+
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
     @media (max-width: 900px) {
@@ -334,6 +348,11 @@
         </div>
       </div>
       <div class="toolbar">
+        <div class="fetch-group">
+          <input id="fetchUrl" type="text" placeholder="Data URL (https://...)" />
+          <input id="fetchToken" type="password" placeholder="Bearer token (optional)" />
+          <button id="fetchBtn" type="button">Fetch</button>
+        </div>
         <button id="changeLogoBtn" type="button">Change Logo</button>
         <button id="columnsBtn" type="button">Columns</button>
         <button id="exportBtn" class="primary" type="button">Export Excel</button>
@@ -389,19 +408,19 @@
     };
 
     const baseColumns = [
-      { id: 'reqno', label: 'Req No', visible: true, type: 'text' },
-      { id: 'description', label: 'Description', visible: true, type: 'text' },
-      { id: 'module', label: 'Module', visible: true, type: 'text' },
-      { id: 'status', label: 'Status', visible: true, type: 'text' },
-      { id: 'created', label: 'Created', visible: true, type: 'date' },
-      { id: 'updated', label: 'Updated', visible: true, type: 'date' },
-      { id: 'creationAging', label: 'Creation Aging', visible: true, type: 'number' },
-      { id: 'updateAging', label: 'Update Aging', visible: true, type: 'number' },
-      { id: 'details', label: 'Details', visible: true, type: 'text' },
-      { id: 'newReq', label: 'New Req', visible: true, type: 'text' },
-      { id: 'solDev', label: 'Sol Dev', visible: true, type: 'text' },
-      { id: 'owner', label: 'Owner', visible: true, type: 'text' },
-      { id: 'timeline', label: 'Timeline', visible: true, type: 'text' }
+      { id: 'reqno', label: 'Req No', visible: true, type: 'text', pinned: true },
+      { id: 'description', label: 'Description', visible: true, type: 'text', pinned: false },
+      { id: 'module', label: 'Module', visible: true, type: 'text', pinned: false },
+      { id: 'status', label: 'Status', visible: true, type: 'text', pinned: false },
+      { id: 'created', label: 'Created', visible: true, type: 'date', pinned: false },
+      { id: 'updated', label: 'Updated', visible: true, type: 'date', pinned: false },
+      { id: 'creationAging', label: 'Creation Aging', visible: true, type: 'number', pinned: false },
+      { id: 'updateAging', label: 'Update Aging', visible: true, type: 'number', pinned: false },
+      { id: 'details', label: 'Details', visible: true, type: 'text', pinned: false },
+      { id: 'newReq', label: 'New Req', visible: true, type: 'text', pinned: false },
+      { id: 'solDev', label: 'Sol Dev', visible: true, type: 'text', pinned: false },
+      { id: 'owner', label: 'Owner', visible: true, type: 'text', pinned: false },
+      { id: 'timeline', label: 'Timeline', visible: true, type: 'text', pinned: false }
     ];
 
     const timelineDefinitions = {
@@ -447,6 +466,13 @@
       render();
     }
 
+    function render() {
+      renderFilters();
+      renderLegend();
+      renderTable();
+      renderSummary();
+    }
+
     function bindEvents() {
       document.getElementById('changeLogoBtn').addEventListener('click', () => els.logoInput.click());
       els.logoInput.addEventListener('change', handleLogoFile);
@@ -467,6 +493,7 @@
         els.columnPanel.classList.toggle('open');
         renderColumnPanel();
       });
+      document.getElementById('fetchBtn').addEventListener('click', handleFetchLink);
       document.getElementById('exportBtn').addEventListener('click', exportExcel);
       document.addEventListener('click', (e) => {
         if (!els.columnPanel.contains(e.target) && !document.getElementById('columnsBtn').contains(e.target)) {
@@ -662,6 +689,48 @@
       }
     }
 
+    async function handleFetchLink() {
+      const url = (document.getElementById('fetchUrl').value || '').trim();
+      const token = (document.getElementById('fetchToken').value || '').trim();
+      if (!url) return alert('Enter a URL to fetch');
+      try {
+        const headers = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch(url, { headers });
+        if (!res.ok) throw new Error('Fetch failed: ' + res.status);
+        const contentType = res.headers.get('content-type') || '';
+        let rows = [];
+        if (contentType.includes('application/json')) {
+          const json = await res.json();
+          if (Array.isArray(json)) rows = json; else if (json && typeof json === 'object') rows = Array.isArray(json.data) ? json.data : Object.values(json);
+        } else if (contentType.includes('text/csv') || contentType.includes('text/plain') || url.toLowerCase().endsWith('.csv')) {
+          const text = await res.text();
+          const wb = XLSX.read(text, { type: 'string', cellDates: true });
+          wb.SheetNames.forEach((sn) => {
+            rows.push(...XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: '' }));
+          });
+        } else {
+          // try binary
+          const arr = await res.arrayBuffer();
+          const wb = XLSX.read(arr, { type: 'array', cellDates: true });
+          wb.SheetNames.forEach((sn) => {
+            rows.push(...XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: '' }));
+          });
+        }
+        state.rows = rows.map((r, i) => buildRow(r, i));
+        state.filters.module = 'all';
+        state.filters.status = 'all';
+        state.filters.search = '';
+        els.moduleFilter.value = 'all';
+        els.statusFilter.value = 'all';
+        els.searchInput.value = '';
+        applyFilters();
+      } catch (err) {
+        console.error(err);
+        alert('Unable to fetch or parse data: ' + err.message);
+      }
+    }
+
     function findActionName(items, target) {
       const targetKey = normalizeHeader(target);
       const match = items.find((entry) => normalizeHeader(entry.ActionName || entry.actionName || entry.action || entry.name || '') === targetKey);
@@ -683,7 +752,8 @@
           badges.push(definition);
         }
       });
-      return badges;
+      // only keep the last up to 4 timeline steps
+      return badges.slice(-4);
     }
 
     function parseDateValue(value) {
@@ -810,9 +880,13 @@
     }
 
     function renderTable() {
-      const visibleColumns = state.columns.filter((col) => col.visible);
+      // Show pinned columns first
+      const pinnedCols = state.columns.filter((col) => col.visible && col.pinned);
+      const unpinnedCols = state.columns.filter((col) => col.visible && !col.pinned);
+      const visibleColumns = [...pinnedCols, ...unpinnedCols];
+
       const headHtml = '<tr>' + visibleColumns.map((col) => `
-        <th data-column-id="${col.id}" draggable="true" scope="col" class="${col.id === 'reqno' ? 'sticky-col' : ''}">
+        <th data-column-id="${col.id}" draggable="true" scope="col" data-pinned="${col.pinned ? '1' : '0'}">
           <span>${escapeHtml(col.label)}</span>
           <span class="drag-hint">↕</span>
         </th>
@@ -836,9 +910,6 @@
         const tr = document.createElement('tr');
         visibleColumns.forEach((col) => {
           const td = document.createElement('td');
-          if (col.id === 'reqno') {
-            td.className = 'sticky-col';
-          }
           td.innerHTML = formatCellValue(row, col.id);
           tr.appendChild(td);
         });
@@ -846,14 +917,61 @@
       });
       els.tableBody.innerHTML = '';
       els.tableBody.appendChild(fragment);
+
+      // Adjust sticky left offsets for pinned columns
+      adjustStickyColumns(visibleColumns);
+    }
+
+    function adjustStickyColumns(visibleColumns) {
+      const ths = Array.from(els.tableHead.querySelectorAll('th'));
+      let left = 0;
+      // first set left for pinned headers
+      for (let i = 0; i < visibleColumns.length; i++) {
+        const col = visibleColumns[i];
+        const th = ths[i];
+        if (col.pinned) {
+          th.classList.add('sticky-col');
+          th.style.left = left + 'px';
+          left += th.getBoundingClientRect().width;
+        } else {
+          th.classList.remove('sticky-col');
+          th.style.left = '';
+        }
+      }
+      // then apply to each row
+      const rows = Array.from(els.tableBody.querySelectorAll('tr'));
+      rows.forEach((tr) => {
+        let left2 = 0;
+        const tds = Array.from(tr.children);
+        for (let i = 0; i < visibleColumns.length; i++) {
+          const col = visibleColumns[i];
+          const td = tds[i];
+          if (!td) continue;
+          if (col.pinned) {
+            td.classList.add('sticky-col');
+            td.style.left = left2 + 'px';
+            left2 += td.getBoundingClientRect().width;
+          } else {
+            td.classList.remove('sticky-col');
+            td.style.left = '';
+          }
+        }
+      });
     }
 
     function formatCellValue(row, columnId) {
       switch (columnId) {
         case 'reqno': return escapeHtml(row.reqno || '');
-        case 'description': return escapeHtml(row.description || '');
+        case 'description': {
+          const txt = String(row.description || '').replace(/-/g, ' – ');
+          const truncated = txt.length > 40 ? txt.slice(0, 40) + '…' : txt;
+          return `<span class="desc-cell" title="${escapeHtml(txt)}">${escapeHtml(truncated)}</span>`;
+        }
         case 'module': return escapeHtml(row.module || '');
-        case 'status': return `<span class="status-pill status-${normalizeHeader(row.status)}">${escapeHtml(row.status || '')}</span>`;
+        case 'status': {
+          const ageFlag = (row.creationAging !== '' && Number(row.creationAging) > 25) || (row.updateAging !== '' && Number(row.updateAging) > 25);
+          return `<span class="status-pill status-${normalizeHeader(row.status)} ${ageFlag ? 'status-ageing' : ''}">${escapeHtml(row.status || '')}</span>`;
+        }
         case 'created': return escapeHtml(formatDate(row.created));
         case 'updated': return escapeHtml(formatDate(row.updated));
         case 'creationAging': return escapeHtml(row.creationAging === '' ? '' : `${row.creationAging}d`);
@@ -911,7 +1029,10 @@
           <label>
             <input type="checkbox" data-column-toggle="${col.id}" ${col.visible ? 'checked' : ''} /> ${escapeHtml(col.label)}
           </label>
-          <span class="drag-handle">⋮⋮</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="pin-btn" data-column-pin="${col.id}">${col.pinned ? 'Unpin' : 'Pin'}</button>
+            <span class="drag-handle">⋮⋮</span>
+          </div>
         </div>
       `).join('');
       els.columnPanelList.innerHTML = items;
@@ -923,6 +1044,17 @@
             renderTable();
             saveSettings();
           }
+        });
+      });
+      els.columnPanelList.querySelectorAll('.pin-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const id = e.currentTarget.dataset.columnPin;
+          const col = state.columns.find(c => c.id === id);
+          if (!col) return;
+          col.pinned = !col.pinned;
+          renderColumnPanel();
+          renderTable();
+          saveSettings();
         });
       });
       els.columnPanelList.querySelectorAll('.panel-item').forEach((item) => {
