@@ -248,6 +248,10 @@
     }
 
     .status-ageing { box-shadow: inset 0 0 0 2px rgba(245,159,11,0.08); }
+    
+    /* Ageing highlights */
+    .ageing-creation { background: rgba(245, 159, 11, 0.12); color: var(--orange); box-shadow: inset 0 0 0 2px rgba(245,159,11,0.08); }
+    .ageing-update { background: rgba(220, 38, 38, 0.12); color: var(--red); box-shadow: inset 0 0 0 2px rgba(220,38,38,0.08); }
 
     .status-new-request { background: rgba(245, 158, 11, 0.15); color: var(--orange); }
     .status-solution-development { background: rgba(37, 99, 235, 0.15); color: var(--blue); }
@@ -356,6 +360,7 @@
         <button id="changeLogoBtn" type="button">Change Logo</button>
         <button id="columnsBtn" type="button">Columns</button>
         <button id="exportBtn" class="primary" type="button">Export Excel</button>
+        <button id="exportEmailBtn" type="button">Export & Email</button>
         <label class="file-pill" for="fileInput">Upload Files</label>
         <input class="sr-only" id="fileInput" type="file" accept=".csv,.xlsx,.xls" multiple />
         <input class="sr-only" id="logoInput" type="file" accept="image/*" />
@@ -365,15 +370,11 @@
     <div class="controls">
       <div class="control-group">
         <label for="moduleFilter">Module</label>
-        <select id="moduleFilter">
-          <option value="all">All Modules</option>
-        </select>
+        <select id="moduleFilter" multiple size="4"></select>
       </div>
       <div class="control-group">
         <label for="statusFilter">Status</label>
-        <select id="statusFilter">
-          <option value="all">All Statuses</option>
-        </select>
+        <select id="statusFilter" multiple size="4"></select>
       </div>
       <div class="control-group">
         <label for="searchInput">Search</label>
@@ -398,6 +399,16 @@
     <h3>Column Management</h3>
     <p style="margin: 0 0 10px; color: var(--muted); font-size: 0.9rem;">Hide, show, and reorder columns.</p>
     <div id="columnPanelList" class="panel-list"></div>
+  </div>
+
+  <div id="fetchPanel" class="panel" aria-label="Fetch result">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+      <h3 id="fetchPanelTitle">Fetch Result</h3>
+      <div>
+        <button id="closeFetchPanel" class="pin-btn">Close</button>
+      </div>
+    </div>
+    <div id="fetchPanelBody" style="margin-top:10px;max-height:60vh;overflow:auto;white-space:pre-wrap;font-size:0.85rem;color:var(--muted);"></div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.1/dist/xlsx.full.min.js"></script>
@@ -440,7 +451,7 @@
       rows: [],
       filteredRows: [],
       columns: baseColumns.map(c => ({ ...c })),
-      filters: { module: 'all', status: 'all', search: '' },
+      filters: { module: [], status: [], search: '' },
       sort: { key: 'updated', direction: 'desc' },
       logo: ''
     };
@@ -478,11 +489,11 @@
       els.logoInput.addEventListener('change', handleLogoFile);
       els.fileInput.addEventListener('change', handleUpload);
       els.moduleFilter.addEventListener('change', (e) => {
-        state.filters.module = e.target.value;
+        state.filters.module = Array.from(e.target.selectedOptions).map(o => o.value);
         applyFilters();
       });
       els.statusFilter.addEventListener('change', (e) => {
-        state.filters.status = e.target.value;
+        state.filters.status = Array.from(e.target.selectedOptions).map(o => o.value);
         applyFilters();
       });
       els.searchInput.addEventListener('input', (e) => {
@@ -495,6 +506,7 @@
       });
       document.getElementById('fetchBtn').addEventListener('click', handleFetchLink);
       document.getElementById('exportBtn').addEventListener('click', exportExcel);
+      document.getElementById('exportEmailBtn').addEventListener('click', exportAndComposeEmail);
       document.addEventListener('click', (e) => {
         if (!els.columnPanel.contains(e.target) && !document.getElementById('columnsBtn').contains(e.target)) {
           els.columnPanel.classList.remove('open');
@@ -571,11 +583,11 @@
       });
       await Promise.all(progress);
       state.rows = allRows.map((row, index) => buildRow(row, index));
-      state.filters.module = 'all';
-      state.filters.status = 'all';
+      state.filters.module = [];
+      state.filters.status = [];
       state.filters.search = '';
-      els.moduleFilter.value = 'all';
-      els.statusFilter.value = 'all';
+      clearMultiSelect(els.moduleFilter);
+      clearMultiSelect(els.statusFilter);
       els.searchInput.value = '';
       applyFilters();
     }
@@ -694,9 +706,9 @@
       const token = (document.getElementById('fetchToken').value || '').trim();
       if (!url) return alert('Enter a URL to fetch');
       try {
-        const headers = {};
+        const headers = { 'Accept': 'application/json, text/csv, text/plain, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        const res = await fetch(url, { headers });
+        const res = await fetch(url, { headers, mode: 'cors' });
         if (!res.ok) throw new Error('Fetch failed: ' + res.status);
         const contentType = res.headers.get('content-type') || '';
         let rows = [];
@@ -718,18 +730,37 @@
           });
         }
         state.rows = rows.map((r, i) => buildRow(r, i));
-        state.filters.module = 'all';
-        state.filters.status = 'all';
+        state.filters.module = [];
+        state.filters.status = [];
         state.filters.search = '';
-        els.moduleFilter.value = 'all';
-        els.statusFilter.value = 'all';
+        clearMultiSelect(els.moduleFilter);
+        clearMultiSelect(els.statusFilter);
         els.searchInput.value = '';
         applyFilters();
+        showFetchPanel('Success — parsed rows: ' + rows.length, (Array.isArray(rows) ? JSON.stringify(rows.slice(0,5), null, 2) : String(rows)).slice(0, 20000));
       } catch (err) {
         console.error(err);
-        alert('Unable to fetch or parse data: ' + err.message);
+        let bodyPreview = '';
+        try {
+          const alt = await fetch(url, { method: 'GET' });
+          try { bodyPreview = await alt.text(); } catch (e) { bodyPreview = ''; }
+        } catch (e) { bodyPreview = ''; }
+        showFetchPanel('Error — ' + (err && err.message ? err.message : 'Unknown error'), (bodyPreview ? 'Response preview:\n' + bodyPreview.slice(0, 2000) : 'No response body available from probe.'));
       }
     }
+
+    function showFetchPanel(title, body) {
+      const panel = document.getElementById('fetchPanel');
+      const titleEl = document.getElementById('fetchPanelTitle');
+      const bodyEl = document.getElementById('fetchPanelBody');
+      titleEl.textContent = title || 'Fetch Result';
+      bodyEl.textContent = body || '';
+      panel.classList.add('open');
+    }
+
+    document.getElementById('closeFetchPanel').addEventListener('click', () => {
+      document.getElementById('fetchPanel').classList.remove('open');
+    });
 
     function findActionName(items, target) {
       const targetKey = normalizeHeader(target);
@@ -752,8 +783,25 @@
           badges.push(definition);
         }
       });
-      // only keep the last up to 4 timeline steps
-      return badges.slice(-4);
+        if (!Array.isArray(items) || !items.length) return [];
+        // attempt to sort by common date fields if present so we pick the latest 4 steps
+        const withDates = items.map((entry) => {
+          const dateVal = entry.ActionDate || entry.actionDate || entry.performedOn || entry.date || entry.Timestamp || entry.timestamp || entry.ActionOn || entry.actionOn;
+          return { entry, date: parseDateValue(dateVal) };
+        });
+        withDates.sort((a, b) => {
+          if (a.date && b.date) return a.date - b.date;
+          if (a.date && !b.date) return 1;
+          if (!a.date && b.date) return -1;
+          return 0;
+        });
+        const badges = [];
+        withDates.forEach(({ entry }) => {
+          const key = normalizeHeader(entry.ActionName || entry.actionName || entry.action || entry.name || '');
+          const definition = timelineDefinitions[key];
+          if (definition) badges.push(definition);
+        });
+        return badges.slice(-4);
     }
 
     function parseDateValue(value) {
@@ -800,8 +848,8 @@
 
     function applyFilters() {
       const filtered = state.rows.filter((row) => {
-        const moduleMatch = state.filters.module === 'all' || row.module === state.filters.module;
-        const statusMatch = state.filters.status === 'all' || row.status === state.filters.status;
+        const moduleMatch = !state.filters.module || state.filters.module.length === 0 || state.filters.module.includes(row.module);
+        const statusMatch = !state.filters.status || state.filters.status.length === 0 || state.filters.status.includes(row.status);
         const searchMatch = !state.filters.search || row._searchText.includes(state.filters.search);
         return moduleMatch && statusMatch && searchMatch;
       });
@@ -857,12 +905,19 @@
     function renderFilters() {
       const modules = [...new Set(state.rows.map((row) => row.module).filter(Boolean))].sort();
       const statuses = [...new Set(state.rows.map((row) => row.status).filter(Boolean))].sort();
-      const moduleOptions = '<option value="all">All Modules</option>' + modules.map((module) => `<option value="${escapeHtml(module)}">${escapeHtml(module)}</option>`).join('');
-      const statusOptions = '<option value="all">All Statuses</option>' + statuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join('');
+      const moduleOptions = modules.map((module) => `<option value="${escapeHtml(module)}">${escapeHtml(module)}</option>`).join('');
+      const statusOptions = statuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join('');
       els.moduleFilter.innerHTML = moduleOptions;
       els.statusFilter.innerHTML = statusOptions;
-      els.moduleFilter.value = state.filters.module;
-      els.statusFilter.value = state.filters.status;
+      // set selected options based on state.filters arrays
+      try {
+        Array.from(els.moduleFilter.options).forEach(opt => {
+          opt.selected = state.filters.module && state.filters.module.length ? state.filters.module.includes(opt.value) : false;
+        });
+        Array.from(els.statusFilter.options).forEach(opt => {
+          opt.selected = state.filters.status && state.filters.status.length ? state.filters.status.includes(opt.value) : false;
+        });
+      } catch (e) {}
     }
 
     function renderSummary() {
@@ -969,13 +1024,29 @@
         }
         case 'module': return escapeHtml(row.module || '');
         case 'status': {
-          const ageFlag = (row.creationAging !== '' && Number(row.creationAging) > 25) || (row.updateAging !== '' && Number(row.updateAging) > 25);
-          return `<span class="status-pill status-${normalizeHeader(row.status)} ${ageFlag ? 'status-ageing' : ''}">${escapeHtml(row.status || '')}</span>`;
+          const creation = (row.creationAging !== '' ? Number(row.creationAging) : null);
+          const update = (row.updateAging !== '' ? Number(row.updateAging) : null);
+          let ageClass = '';
+          if (update !== null && update > 25) ageClass = 'ageing-update';
+          else if (creation !== null && creation > 25) ageClass = 'ageing-creation';
+          return `<span class="status-pill status-${normalizeHeader(row.status)} ${ageClass}">${escapeHtml(row.status || '')}</span>`;
         }
         case 'created': return escapeHtml(formatDate(row.created));
         case 'updated': return escapeHtml(formatDate(row.updated));
-        case 'creationAging': return escapeHtml(row.creationAging === '' ? '' : `${row.creationAging}d`);
-        case 'updateAging': return escapeHtml(row.updateAging === '' ? '' : `${row.updateAging}d`);
+        case 'creationAging': {
+          const val = row.creationAging === '' ? '' : `${row.creationAging}d`;
+          if (!val) return '';
+          const isOld = row.creationAging !== '' && Number(row.creationAging) > 25;
+          const cls = 'creation-age' + (isOld ? ' ageing-creation' : '');
+          return `<span class="${cls}">${escapeHtml(val)}</span>`;
+        }
+        case 'updateAging': {
+          const val2 = row.updateAging === '' ? '' : `${row.updateAging}d`;
+          if (!val2) return '';
+          const isOld2 = row.updateAging !== '' && Number(row.updateAging) > 25;
+          const cls2 = 'update-age' + (isOld2 ? ' ageing-update' : '');
+          return `<span class="${cls2}">${escapeHtml(val2)}</span>`;
+        }
         case 'details': return escapeHtml(row.details || '');
         case 'newReq': return escapeHtml(row.newReq || '');
         case 'solDev': return escapeHtml(row.solDev || '');
@@ -1091,6 +1162,11 @@
         .replace(/'/g, '&#39;');
     }
 
+    function clearMultiSelect(selectEl) {
+      if (!selectEl) return;
+      try { Array.from(selectEl.options).forEach(opt => opt.selected = false); } catch (e) {}
+    }
+
     function exportExcel() {
       if (!state.filteredRows.length) return;
       const visibleColumns = state.columns.filter((col) => col.visible);
@@ -1125,6 +1201,42 @@
         case 'timeline': return row.timeline.map((item) => item.short).join(', ');
         default: return '';
       }
+    }
+
+    function exportFilteredToCSVBytes() {
+      if (!state.filteredRows.length) return null;
+      const visibleColumns = state.columns.filter((col) => col.visible);
+      const exportRows = state.filteredRows.map((row) => {
+        const rowData = {};
+        visibleColumns.forEach((col) => {
+          rowData[col.label] = getExportValue(row, col.id);
+        });
+        return rowData;
+      });
+      const worksheet = XLSX.utils.json_to_sheet(exportRows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Requests');
+      const array = XLSX.write(workbook, { bookType: 'csv', type: 'array' });
+      return { array, fileName: `dsm_requests_${new Date().toISOString().slice(0, 10)}.csv` };
+    }
+
+    function exportAndComposeEmail() {
+      const res = exportFilteredToCSVBytes();
+      if (!res) { alert('No rows to export'); return; }
+      const blob = new Blob([res.array], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = res.fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      const modulesText = (state.filters.module && state.filters.module.length) ? state.filters.module.join(', ') : 'All';
+      const statusesText = (state.filters.status && state.filters.status.length) ? state.filters.status.join(', ') : 'All';
+      const subject = `DSM Requests Export ${new Date().toISOString().slice(0,10)}`;
+      const body = `Filters:\nModules: ${modulesText}\nStatuses: ${statusesText}\nRows: ${state.filteredRows.length}\nAttached: ${res.fileName}\n\n(If your email client does not auto-attach the file, please attach the downloaded file manually.)`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     }
 
     document.addEventListener('DOMContentLoaded', init);

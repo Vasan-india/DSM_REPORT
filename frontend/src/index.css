@@ -1,0 +1,197 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --smrt-blue: #0d4f8b;
+  --smrt-red: #d8232a;
+  --smrt-white: #ffffff;
+  --smrt-light: #edf2f7;
+  --smrt-track: #cad3de;
+  --text-main: #132538;
+  --panel: rgba(255, 255, 255, 0.92);
+  --shadow: 0 20px 38px rgba(9, 27, 43, 0.12);
+  --surface-bg: radial-gradient(circle at 20% -10%, #d9e6f5, transparent 34%),
+    radial-gradient(circle at 85% 4%, #f5d3d5, transparent 26%), linear-gradient(180deg, #eff4fa 0%, #f8fafc 100%);
+}
+
+html[data-theme='dark'] {
+  --smrt-blue: #4f8bc4;
+  --smrt-red: #ff6466;
+  --smrt-white: #0f1a26;
+  --smrt-light: #1a2735;
+  --smrt-track: #41576b;
+  --text-main: #e4edf6;
+  --panel: rgba(24, 37, 52, 0.92);
+  --shadow: 0 20px 38px rgba(0, 0, 0, 0.45);
+  --surface-bg: radial-gradient(circle at 20% -10%, #1d3650, transparent 36%),
+    radial-gradient(circle at 85% 4%, #4a1e27, transparent 24%), linear-gradient(180deg, #0b141f 0%, #101a27 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--surface-bg);
+  color: var(--text-main);
+  font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.page-shell {
+  min-height: 100vh;
+}
+
+.topbar {
+  background: linear-gradient(110deg, var(--smrt-blue), #0a3d6a 62%, var(--smrt-red));
+  color: #fff;
+}
+
+.brand-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  letter-spacing: 0.1rem;
+  font-size: 1.55rem;
+  line-height: 1.05;
+}
+
+.brand-sub {
+  opacity: 0.86;
+  font-size: 0.9rem;
+}
+
+.hero-card {
+  background: linear-gradient(130deg, #103c69 0%, #0a5d9f 56%, #b31f25 100%);
+  color: #fff;
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.track-flow {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+}
+
+.track-flow span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.track-flow::before,
+.track-flow::after {
+  content: '';
+  position: absolute;
+  height: 2px;
+  left: 8px;
+  right: 8px;
+  background: repeating-linear-gradient(90deg, #9ab7d6 0 18px, transparent 18px 26px);
+}
+
+.track-flow::before {
+  top: 8px;
+}
+
+.track-flow::after {
+  bottom: 8px;
+}
+
+.train-runner {
+  position: absolute;
+  top: calc(50% - 11px);
+  left: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--smrt-red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: train-move 5.5s linear infinite;
+}
+
+.sticky-filter {
+  position: sticky;
+  top: 10px;
+  z-index: 12;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid rgba(104, 125, 146, 0.28);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(6px);
+}
+
+.legend-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-radius: 12px;
+  padding: 7px;
+  background: var(--panel);
+  border: 1px solid rgba(110, 130, 150, 0.2);
+}
+
+.kpi-card {
+  border-radius: 14px;
+  border: 1px solid rgba(110, 130, 150, 0.24);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+}
+
+.trend-pill {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(13, 79, 139, 0.12);
+  color: var(--smrt-blue);
+  font-weight: 700;
+}
+
+@keyframes train-move {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(300px);
+  }
+}
+
+@media (max-width: 900px) {
+  .brand-title {
+    font-size: 1.3rem;
+  }
+
+  .track-flow {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-bottom: 22px;
+  }
+
+  .track-flow span {
+    font-size: 0.64rem;
+  }
+
+  .train-runner {
+    animation-duration: 4s;
+  }
+}
