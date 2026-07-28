@@ -30,6 +30,39 @@ SMRT-inspired DSM Service Request Dashboard with server-side file hosting, share
 	- SLA risks
 	- Delayed requests
 
+## Multi-Select Filter Functionality
+
+- Module and Status use multi-select dropdowns with built-in search.
+- Both filters provide Select All and Clear All actions.
+- Filters are composable and update dashboard metrics/charts/table instantly.
+- Filter selections and quick search are saved in browser storage.
+
+## Shareable Dashboard Links
+
+- Every upload creates a unique public dashboard route: `/share/:shareId`.
+- Recipients can open the link and view data without re-uploading files.
+- A Copy Share Link action is shown after successful processing.
+- Version history is tracked by series, enabling weekly progression.
+
+## Weekly Update Workflow
+
+- Enable Weekly Update Mode during upload.
+- Upload is automatically parsed, validated, and compared to previous version in the same series.
+- Executive summary highlights:
+	- Newly created requests
+	- Closed requests
+	- Status changes
+	- SLA risks
+	- Delayed requests
+
+## Server-Side File Storage Architecture
+
+- Uploaded files are stored in `backend/uploads/` using generated safe filenames.
+- Metadata and computed metrics are stored in SQLite `backend/data/dsm.db`.
+- `uploads` table stores share ID, series/version, file metadata, weekly summary, and metrics.
+- `requests` table stores normalized request rows for each upload snapshot.
+- API endpoints expose upload ingestion, share retrieval, and series version listing.
+
 ## Run Locally
 
 ### 1) Start Backend

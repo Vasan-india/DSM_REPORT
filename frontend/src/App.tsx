@@ -322,7 +322,7 @@ function DashboardPage() {
       setGeneratedLink(link);
       navigate(`/share/${payload.shareId}`);
       setNotice({ level: 'success', text: 'Upload processed successfully. Dashboard refreshed with a new share link.' });
-    } catch (error) {
+    } catch {
       setNotice({ level: 'error', text: 'Upload failed. Please verify file format and data consistency.' });
     } finally {
       setUploading(false);
